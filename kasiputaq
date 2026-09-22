@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Roda Eja | Padan Suku Kata</title>
+
+<!--
+=========================================================================
+  RODA EJA — Aplikasi Padan Suku Kata untuk Murid Inklusif
+=========================================================================
+  CARA GUNA / EDIT FAIL INI
+  -------------------------------------------------------------------
+  1. SENARAI PERKATAAN
+     Cari senarai "const WORDS" dalam <script> di bawah. Setiap
+     perkataan ada: word (ejaan penuh), syllables (senarai suku kata),
+     emoji (gambar mudah) dan image (laluan fail gambar, jika ada).
+     Anda boleh tukar/tambah/kurangkan perkataan di situ.
+
+  2. MEMASUKKAN SUARA SENDIRI (PALING PENTING)
+     Apabila murid klik suku kata, apps akan cuba mainkan fail audio
+     daripada folder "audio/". Letakkan folder "audio" di sebelah
+     fail HTML ini (dalam repo GitHub yang sama), dengan nama fail
+     ikut suku kata, contohnya:
+
+         audio/
+           bu.mp3
+           ku.mp3
+           ba.mp3
+           pa.mp3
+           ... (satu fail bagi setiap suku kata unik)
+           kata-buku.mp3   <- (pilihan) sebutan perkataan penuh
+
+     Format cadangan: mp3 atau wav, rakaman pendek 1-2 saat sahaja.
+     Jika fail belum ada / tidak jumpa, apps akan guna suara robot
+     (Text-to-Speech pelayar) secara automatik sebagai ganti — jadi
+     apps tetap boleh diuji dahulu sebelum rakaman sebenar sedia.
+
+     Nak tukar folder/format audio? Ubah fungsi `audioPathFor()`
+     dalam <script>.
+
+  3. TUKAR GAMBAR
+     Letakkan gambar sebenar dalam folder "images/" dengan nama
+     sama seperti field "image" pada setiap perkataan (contoh:
+     images/buku.png). Jika gambar tiada, emoji akan dipaparkan
+     sebagai ganti secara automatik.
+
+  4. WARNA / FON
+     Semua warna & saiz ditakrifkan sebagai pemboleh ubah CSS
+     dalam :root di bahagian <style>, senang untuk disesuaikan
+     dengan keperluan murid (kontras tinggi, saiz besar, dsb).
+=========================================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --sky:        #eaf6ff;
+    --sun:        #ffc93c;
+    --coral:      #ff6f61;
+    --grass:      #3ec28f;
+    --grape:      #7c6ce0;
+    --ink:        #2b2540;
+    --paper:      #ffffff;
+    --shadow:     rgba(43,37,64,0.16);
+    --radius-lg:  28px;
+    --radius-md:  18px;
+    --font-head:  'Baloo 2', system-ui, sans-serif;
+    --font-body:  'Nunito', system-ui, sans-serif;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background:
+      radial-gradient(circle at 12% 8%, #fff6de 0%, transparent 45%),
+      radial-gradient(circle at 88% 85%, #e3f7ee 0%, transparent 45%),
+      var(--sky);
+    font-family: var(--font-body);
+    color: var(--ink);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .app{
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 20px 16px 48px;
+  }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; flex-wrap:wrap;
+    margin-bottom: 18px;
+  }
+
+  h1{
+    font-family: var(--font-head);
+    font-weight:800;
+    font-size: clamp(1.5rem, 5vw, 2.1rem);
+    margin: 0;
+    color: var(--grape);
+    line-height:1.1;
+  }
+  h1 span{ color: var(--coral); }
+
+  .scoreboard{
+    display:flex; gap:10px;
+  }
+  .pill{
+    background: var(--paper);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-family: var(--font-head);
+    font-weight:700;
+    font-size: 0.95rem;
+    box-shadow: 0 6px 14px var(--shadow);
+    display:flex; align-items:center; gap:6px;
+  }
+
+  /* ---------- Kad utama ---------- */
+  .card{
+    background: var(--paper);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 14px 30px var(--shadow);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  /* ---------- Roda ---------- */
+  .wheel-zone{
+    display:flex; flex-direction:column; align-items:center; gap:16px;
+  }
+  .wheel-wrap{
+    position:relative;
+    width: min(280px, 70vw);
+    height: min(280px, 70vw);
+  }
+  #wheelCanvas{
+    width:100%; height:100%;
+    display:block;
+    border-radius:50%;
+    box-shadow: 0 10px 26px var(--shadow);
+    transition: transform 4.2s cubic-bezier(0.17, 0.86, 0.24, 1);
+  }
+  .pointer{
+    position:absolute;
+    top:-6px; left:50%;
+    transform: translateX(-50%);
+    width:0; height:0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-top: 22px solid var(--coral);
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,0.25));
+    z-index:2;
+  }
+  .spin-btn{
+    font-family: var(--font-head);
+    font-weight:800;
+    font-size: 1.15rem;
+    color:#fff;
+    background: linear-gradient(180deg, var(--grape), #6355c9);
+    border:none;
+    border-radius: 999px;
+    padding: 14px 38px;
+    cursor:pointer;
+    box-shadow: 0 8px 0 #574aad, 0 12px 20px var(--shadow);
+    transition: transform .08s ease;
+  }
+  .spin-btn:active{ transform: translateY(6px); box-shadow: 0 2px 0 #574aad; }
+  .spin-btn:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  /* ---------- Zon permainan (padan suku kata) ---------- */
+  .play-zone{ display:none; }
+  .play-zone.show{ display:block; }
+
+  .prompt-figure{
+    text-align:center;
+    margin-bottom: 18px;
+  }
+  .prompt-figure .art{
+    font-size: 5.2rem;
+    line-height:1;
+    user-select:none;
+  }
+  .prompt-figure img{
+    max-width: 160px; max-height:160px;
+    border-radius: var(--radius-md);
+  }
+  .prompt-figure .hint{
+    margin-top:8px;
+    font-family: var(--font-head);
+    font-weight:700;
+    color:#8a83a6;
+    font-size:0.95rem;
+  }
+
+  .slots{
+    display:flex; justify-content:center; gap:14px;
+    margin-bottom: 22px;
+    flex-wrap:wrap;
+  }
+  .slot{
+    min-width: 84px; height: 68px;
+    background: #f2f0fb;
+    border: 3px dashed #c9c3ea;
+    border-radius: var(--radius-md);
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--font-head);
+    font-weight:800;
+    font-size: 1.5rem;
+    color: var(--grape);
+    cursor: default;
+    transition: transform .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .slot.filled{
+    background: #eee9ff;
+    border-style: solid;
+    border-color: var(--grape);
+    cursor:pointer;
+  }
+  .slot.correct{
+    background: #e2f9ef; border-color: var(--grass); color:#1e8f68;
+  }
+  .slot.wrong{
+    animation: shake .45s ease;
+    background:#ffe9e6; border-color: var(--coral); color:#c94a3e;
+  }
+  @keyframes shake{
+    0%,100%{ transform: translateX(0); }
+    20%{ transform: translateX(-8px); }
+    40%{ transform: translateX(8px); }
+    60%{ transform: translateX(-6px); }
+    80%{ transform: translateX(6px); }
+  }
+
+  .palette{
+    display:flex; justify-content:center; gap:12px; flex-wrap:wrap;
+    margin-bottom: 8px;
+  }
+  .tile{
+    font-family: var(--font-head);
+    font-weight:800;
+    font-size: 1.35rem;
+    color: var(--ink);
+    background: var(--sun);
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 14px 22px;
+    min-width: 78px;
+    cursor:pointer;
+    box-shadow: 0 6px 0 #d9a824, 0 10px 16px var(--shadow);
+    transition: transform .08s ease, opacity .15s ease;
+  }
+  .tile:hover{ filter: brightness(1.03); }
+  .tile:active{ transform: translateY(5px); box-shadow: 0 1px 0 #d9a824; }
+  .tile.used{
+    opacity: 0.28;
+    pointer-events: none;
+    box-shadow:none;
+  }
+  .tile.listen-only{
+    background: #cdeeff;
+    box-shadow: 0 6px 0 #9cd3e8, 0 10px 16px var(--shadow);
+  }
+
+  .feedback{
+    text-align:center;
+    min-height: 34px;
+    font-family: var(--font-head);
+    font-weight:800;
+    font-size: 1.15rem;
+    margin-top: 6px;
+  }
+  .feedback.good{ color: var(--grass); }
+  .feedback.bad{ color: var(--coral); }
+
+  .next-btn{
+    display:none;
+    margin: 14px auto 0;
+    font-family: var(--font-head);
+    font-weight:800;
+    font-size: 1.05rem;
+    color:#fff;
+    background: linear-gradient(180deg, var(--grass), #2fa87a);
+    border:none;
+    border-radius: 999px;
+    padding: 12px 30px;
+    cursor:pointer;
+    box-shadow: 0 6px 0 #248f66;
+  }
+  .next-btn.show{ display:block; }
+
+  footer{
+    text-align:center;
+    font-size:0.85rem;
+    color:#8a83a6;
+    margin-top: 10px;
+  }
+
+  /* fokus papan kekunci kelihatan (aksesibiliti) */
+  button:focus-visible, .slot:focus-visible{
+    outline: 3px solid var(--grape);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #wheelCanvas{ transition: none; }
+    .slot.wrong{ animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header>
+    <h1>🎡 Roda <span>Eja</span></h1>
+    <div class="scoreboard">
+      <div class="pill">⭐ Markah: <span id="scoreVal">0</span></div>
+      <div class="pill">🏆 Terbaik: <span id="bestVal">0</span></div>
+    </div>
+  </header>
+
+  <!-- ================= RODA PUTAR ================= -->
+  <section class="card wheel-zone" id="wheelSection">
+    <div class="wheel-wrap">
+      <div class="pointer"></div>
+      <canvas id="wheelCanvas" width="600" height="600"></canvas>
+    </div>
+    <button class="spin-btn" id="spinBtn">Putar Roda!</button>
+  </section>
+
+  <!-- ================= ZON PERMAINAN ================= -->
+  <section class="card play-zone" id="playSection">
+    <div class="prompt-figure">
+      <div id="promptArt" class="art">📖</div>
+      <div class="hint">Klik suku kata untuk dengar bunyinya, susun jadi satu perkataan</div>
+    </div>
+
+    <div class="slots" id="slots"></div>
+    <div class="palette" id="palette"></div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="nextBtn">Putar Lagi ➜</button>
+  </section>
+
+  <footer>Dibina untuk membantu murid mengeja suku kata • sunting bebas untuk kegunaan sendiri</footer>
+</div>
+
+<script>
+/* =======================================================================
+   1) SENARAI PERKATAAN & SUKU KATA — SUNTING DI SINI
+   ======================================================================= */
+const WORDS = [
+  { word:"buku", syllables:["bu","ku"], emoji:"📖", image:"images/buku.png" },
+  { word:"bapa", syllables:["ba","pa"], emoji:"👨", image:"images/bapa.png" },
+  { word:"ibu",  syllables:["i","bu"],  emoji:"👩", image:"images/ibu.png" },
+  { word:"meja", syllables:["me","ja"], emoji:"🪑", image:"images/meja.png" },
+  { word:"nasi", syllables:["na","si"], emoji:"🍚", image:"images/nasi.png" },
+  { word:"bola", syllables:["bo","la"], emoji:"⚽", image:"images/bola.png" },
+  { word:"roti", syllables:["ro","ti"], emoji:"🍞", image:"images/roti.png" },
+  { word:"kaki", syllables:["ka","ki"], emoji:"🦶", image:"images/kaki.png" },
+  { word:"mata", syllables:["ma","ta"], emoji:"👁️", image:"images/mata.png" },
+  { word:"lori", syllables:["lo","ri"], emoji:"🚚", image:"images/lori.png" },
+  { word:"baju", syllables:["ba","ju"], emoji:"👕", image:"images/baju.png" },
+  { word:"kopi", syllables:["ko","pi"], emoji:"☕", image:"images/kopi.png" },
+  { word:"susu", syllables:["su","su"], emoji:"🥛", image:"images/susu.png" },
+  { word:"pena", syllables:["pe","na"], emoji:"🖊️", image:"images/pena.png" },
+  { word:"pipi", syllables:["pi","pi"], emoji:"😊", image:"images/pipi.png" },
+  { word:"gigi", syllables:["gi","gi"], emoji:"🦷", image:"images/gigi.png" },
+  { word:"topi", syllables:["to","pi"], emoji:"🧢", image:"images/topi.png" },
+  { word:"sofa", syllables:["so","fa"], emoji:"🛋️", image:"images/sofa.png" },
+  { word:"kera", syllables:["ke","ra"], emoji:"🐒", image:"images/kera.png" },
+  { word:"lada", syllables:["la","da"], emoji:"🌶️", image:"images/lada.png" },
+];
+
+/* =======================================================================
+   2) AUDIO — folder "audio/<suku-kata>.mp3" akan digunakan jika wujud.
+      Jika tiada, apps guna Text-to-Speech pelayar sebagai ganti.
+      Untuk sebutan perkataan penuh (bila jawapan betul), apps cuba
+      "audio/kata-<perkataan>.mp3" dahulu.
+   ======================================================================= */
+function audioPathFor(text){
+  return `audio/${text}.mp3`;
+}
+function fullWordAudioPath(word){
+  return `audio/kata-${word}.mp3`;
+}
+
+function playSound(text, { isFullWord=false } = {}){
+  const src = isFullWord ? fullWordAudioPath(text) : audioPathFor(text);
+  const player = new Audio(src);
+  let usedFallback = false;
+  const fallback = () => {
+    if(usedFallback) return;
+    usedFallback = true;
+    speakFallback(text);
+  };
+  player.addEventListener('error', fallback);
+  const playPromise = player.play();
+  if(playPromise && playPromise.catch) playPromise.catch(fallback);
+}
+
+function speakFallback(text){
+  if(!('speechSynthesis' in window)) return;
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'ms-MY';
+  utter.rate = 0.85;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utter);
+}
+
+/* =======================================================================
+   3) STATE & MARKAH
+   ======================================================================= */
+let score = 0;
+let best = Number(localStorage.getItem('rodaEja_best') || 0);
+let currentWord = null;
+let filledSlots = [];   // { syllable, tileEl }
+let isChecking = false;
+
+const scoreValEl = document.getElementById('scoreVal');
+const bestValEl  = document.getElementById('bestVal');
+bestValEl.textContent = best;
+
+function addScore(){
+  score += 1;
+  scoreValEl.textContent = score;
+  if(score > best){
+    best = score;
+    bestValEl.textContent = best;
+    localStorage.setItem('rodaEja_best', best);
+  }
+}
+
+/* =======================================================================
+   4) LUKIS RODA (canvas)
+   ======================================================================= */
+const canvas = document.getElementById('wheelCanvas');
+const ctx = canvas.getContext('2d');
+const wheelColors = ['#ff6f61','#ffc93c','#3ec28f','#7c6ce0','#4fb6e0'];
+let currentRotation = 0;
+
+function drawWheel(){
+  const n = WORDS.length;
+  const cx = canvas.width/2, cy = canvas.height/2, r = canvas.width/2 - 6;
+  const slice = (2*Math.PI)/n;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let i=0;i<n;i++){
+    const start = i*slice, end = start+slice;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,end);
+    ctx.closePath();
+    ctx.fillStyle = wheelColors[i % wheelColors.length];
+    ctx.fill();
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(start + slice/2);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.font = '44px system-ui, sans-serif';
+    ctx.fillText(WORDS[i].emoji, r-14, 0);
+    ctx.restore();
+  }
+  // bulatan tengah
+  ctx.beginPath();
+  ctx.arc(cx,cy,34,0,2*Math.PI);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#e6e1f7';
+  ctx.stroke();
+}
+drawWheel();
+
+/* =======================================================================
+   5) LOGIK PUTAR RODA
+   ======================================================================= */
+const spinBtn = document.getElementById('spinBtn');
+const wheelSection = document.getElementById('wheelSection');
+const playSection = document.getElementById('playSection');
+
+spinBtn.addEventListener('click', spinWheel);
+
+function spinWheel(){
+  spinBtn.disabled = true;
+  const n = WORDS.length;
+  const sliceDeg = 360/n;
+  const targetIndex = Math.floor(Math.random()*n);
+  // sudut supaya bahagian 'targetIndex' berhenti tepat di penunjuk (atas)
+  const targetSliceCenterDeg = targetIndex*sliceDeg + sliceDeg/2;
+  const extraSpins = 5*360; // pusingan tambahan supaya nampak berputar laju
+  const finalDeg = extraSpins + (360 - targetSliceCenterDeg);
+  currentRotation += finalDeg;
+  canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+  setTimeout(() => {
+    startRound(WORDS[targetIndex]);
+    spinBtn.disabled = false;
+  }, 4300);
+}
+
+/* =======================================================================
+   6) BULATKAN SUKU KATA (BABAK PERMAINAN)
+   ======================================================================= */
+const promptArt = document.getElementById('promptArt');
+const slotsEl = document.getElementById('slots');
+const paletteEl = document.getElementById('palette');
+const feedbackEl = document.getElementById('feedback');
+const nextBtn = document.getElementById('nextBtn');
+
+function uniqueSyllablePool(){
+  const set = new Set();
+  WORDS.forEach(w => w.syllables.forEach(s => set.add(s)));
+  return Array.from(set);
+}
+const ALL_SYLLABLES = uniqueSyllablePool();
+
+function pickDistractors(word, count){
+  const exclude = new Set(word.syllables);
+  const options = ALL_SYLLABLES.filter(s => !exclude.has(s));
+  const chosen = [];
+  while(chosen.length < count && options.length){
+    const idx = Math.floor(Math.random()*options.length);
+    chosen.push(options.splice(idx,1)[0]);
+  }
+  return chosen;
+}
+
+function shuffle(arr){
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function startRound(wordObj){
+  currentWord = wordObj;
+  filledSlots = [];
+  isChecking = false;
+  feedbackEl.textContent = '';
+  feedbackEl.className = 'feedback';
+  nextBtn.classList.remove('show');
+
+  wheelSection.style.display = 'none';
+  playSection.classList.add('show');
+
+  // paparkan gambar / emoji
+  promptArt.textContent = wordObj.emoji;
+  const img = new Image();
+  img.onload = () => {
+    promptArt.innerHTML = '';
+    const imgEl = document.createElement('img');
+    imgEl.src = wordObj.image;
+    imgEl.alt = wordObj.word;
+    promptArt.appendChild(imgEl);
+  };
+  img.onerror = () => { promptArt.textContent = wordObj.emoji; };
+  img.src = wordObj.image;
+
+  // slot kosong ikut bilangan suku kata
+  slotsEl.innerHTML = '';
+  wordObj.syllables.forEach((_, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.dataset.index = i;
+    slot.textContent = '';
+    slot.addEventListener('click', () => onSlotClick(i));
+    slotsEl.appendChild(slot);
+  });
+
+  // palet: suku kata betul + 2 pengganggu, dicampur
+  const distractors = pickDistractors(wordObj, 2);
+  const tiles = shuffle([...wordObj.syllables, ...distractors]);
+  paletteEl.innerHTML = '';
+  tiles.forEach((syl, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tile';
+    btn.type = 'button';
+    btn.textContent = syl;
+    btn.dataset.syllable = syl;
+    btn.dataset.tileId = i;
+    btn.addEventListener('click', () => onTileClick(btn));
+    paletteEl.appendChild(btn);
+  });
+}
+
+function onTileClick(tileEl){
+  if(isChecking || tileEl.classList.contains('used')) return;
+  const syl = tileEl.dataset.syllable;
+
+  // 1) sentiasa mainkan bunyi suku kata bila diklik
+  playSound(syl);
+
+  // 2) kalau masih ada slot kosong, letakkan suku kata ke slot seterusnya
+  const emptySlot = [...slotsEl.children].find(s => !s.classList.contains('filled'));
+  if(!emptySlot) return;
+
+  emptySlot.textContent = syl;
+  emptySlot.classList.add('filled');
+  emptySlot.dataset.sourceTile = tileEl.dataset.tileId;
+  tileEl.classList.add('used');
+
+  filledSlots.push({ syllable: syl, tileEl });
+
+  const totalSlots = slotsEl.children.length;
+  if(filledSlots.length === totalSlots){
+    isChecking = true;
+    setTimeout(checkAnswer, 250);
+  }
+}
+
+// klik slot yang sudah terisi = boleh dengar semula ATAU buang balik ke palet
+function onSlotClick(index){
+  if(isChecking) return;
+  const slot = slotsEl.children[index];
+  if(!slot.classList.contains('filled')) return;
+
+  playSound(slot.textContent);
+
+  // buang balik ke palet (untuk murid betulkan susunan)
+  const tileId = slot.dataset.sourceTile;
+  const tileEl = [...paletteEl.children].find(t => t.dataset.tileId === tileId);
+  if(tileEl) tileEl.classList.remove('used');
+  filledSlots = filledSlots.filter(f => f.tileEl !== tileEl);
+
+  slot.textContent = '';
+  slot.classList.remove('filled');
+  delete slot.dataset.sourceTile;
+}
+
+function checkAnswer(){
+  const attempt = filledSlots.map(f => f.syllable).join('');
+  const answer = currentWord.syllables.join('');
+  const slots = [...slotsEl.children];
+
+  if(attempt === answer){
+    slots.forEach(s => s.classList.add('correct'));
+    feedbackEl.textContent = `Bagus! "${currentWord.word}" — betul! ⭐`;
+    feedbackEl.className = 'feedback good';
+    addScore();
+    playSound(currentWord.word, { isFullWord:true });
+    nextBtn.classList.add('show');
+  } else {
+    slots.forEach(s => s.classList.add('wrong'));
+    feedbackEl.textContent = 'Cuba lagi ya, dengar bunyinya dahulu.';
+    feedbackEl.className = 'feedback bad';
+    setTimeout(resetSlotsForRetry, 700);
+  }
+}
+
+function resetSlotsForRetry(){
+  [...slotsEl.children].forEach(s => {
+    s.textContent = '';
+    s.classList.remove('filled','wrong','correct');
+    delete s.dataset.sourceTile;
+  });
+  [...paletteEl.children].forEach(t => t.classList.remove('used'));
+  filledSlots = [];
+  isChecking = false;
+  feedbackEl.textContent = '';
+  feedbackEl.className = 'feedback';
+}
+
+nextBtn.addEventListener('click', () => {
+  playSection.classList.remove('show');
+  wheelSection.style.display = 'flex';
+});
+</script>
+</body>
+</html>
