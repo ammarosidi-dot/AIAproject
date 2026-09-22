@@ -12,43 +12,41 @@
   CARA GUNA / EDIT FAIL INI
   -------------------------------------------------------------------
   1. SENARAI PERKATAAN
-     Cari senarai "const WORDS" dalam <script> di bawah. Setiap
-     perkataan ada: word (ejaan penuh), syllables (senarai suku kata),
-     emoji (gambar mudah) dan image (laluan fail gambar, jika ada).
-     Anda boleh tukar/tambah/kurangkan perkataan di situ.
+     Cari "const WORDS" dalam <script>. Setiap perkataan ada: word,
+     syllables (suku kata), emoji, dan image (laluan fail gambar).
 
-  2. MEMASUKKAN SUARA SENDIRI (PALING PENTING)
-     Apabila murid klik suku kata, apps akan cuba mainkan fail audio
-     daripada folder "audio/". Letakkan folder "audio" di sebelah
-     fail HTML ini (dalam repo GitHub yang sama), dengan nama fail
-     ikut suku kata, contohnya:
+  2. SUARA SUKU KATA & PERKATAAN (paling penting)
+     Letakkan folder "audio/" sebelah fail HTML ini, dengan nama
+     fail ikut suku kata, contoh:
+         audio/bu.mp3   audio/ku.mp3   audio/ba.mp3 ...
+         audio/kata-buku.mp3   (sebutan penuh bila jawapan betul)
+     Jika fail belum ada, apps guna suara robot (Text-to-Speech
+     pelayar) secara automatik sebagai ganti.
 
-         audio/
-           bu.mp3
-           ku.mp3
-           ba.mp3
-           pa.mp3
-           ... (satu fail bagi setiap suku kata unik)
-           kata-buku.mp3   <- (pilihan) sebutan perkataan penuh
+  3. SOUND EFFECT (bunyi klik roda / jawapan betul / salah)
+     Letakkan dalam folder "audio/" juga:
+         audio/sfx-putar.mp3   -> bunyi bila tekan "Putar Roda"
+         audio/sfx-betul.mp3   -> bunyi bila jawapan betul
+         audio/sfx-salah.mp3   -> bunyi bila jawapan salah
+     Jika fail tiada, apps automatik jana bunyi "bip" ringkas
+     menggunakan Web Audio supaya apps tetap ada respons bunyi.
 
-     Format cadangan: mp3 atau wav, rakaman pendek 1-2 saat sahaja.
-     Jika fail belum ada / tidak jumpa, apps akan guna suara robot
-     (Text-to-Speech pelayar) secara automatik sebagai ganti — jadi
-     apps tetap boleh diuji dahulu sebelum rakaman sebenar sedia.
+  4. MUZIK LATAR (background music)
+     Letakkan "audio/background.mp3" (muzik pendek, boleh diulang/
+     loop). Ia akan bermain lepas murid tekan butang "Main" di
+     halaman utama (pelayar perlu tindakan murid dahulu sebelum
+     boleh mainkan bunyi, ini had keselamatan pelayar). Murid boleh
+     tekan ikon 🔊/🔇 di penjuru skrin untuk bisukan/buka semula.
+     Tiada fail? Apps senyap sahaja, tiada ralat.
 
-     Nak tukar folder/format audio? Ubah fungsi `audioPathFor()`
-     dalam <script>.
+  5. GAMBAR
+     Folder "images/" dengan nama sama seperti field "image".
+     Tiada gambar? emoji dipaparkan sebagai ganti.
 
-  3. TUKAR GAMBAR
-     Letakkan gambar sebenar dalam folder "images/" dengan nama
-     sama seperti field "image" pada setiap perkataan (contoh:
-     images/buku.png). Jika gambar tiada, emoji akan dipaparkan
-     sebagai ganti secara automatik.
-
-  4. WARNA / FON
-     Semua warna & saiz ditakrifkan sebagai pemboleh ubah CSS
-     dalam :root di bahagian <style>, senang untuk disesuaikan
-     dengan keperluan murid (kontras tinggi, saiz besar, dsb).
+  6. NAK PUBLISH SUPAYA MURID BOLEH MAIN DI TELEFON/LAPTOP?
+     Cara paling mudah ialah GITHUB PAGES (percuma, tiada muat
+     turun/pasang perlu, murid buka pautan sahaja dalam pelayar
+     telefon atau laptop). Lihat arahan penuh dalam mesej perbualan.
 =========================================================================
 -->
 
@@ -89,6 +87,23 @@
     max-width: 720px;
     margin: 0 auto;
     padding: 20px 16px 48px;
+    position: relative;
+  }
+
+  /* ---------- Suis muzik (tetap kelihatan di penjuru) ---------- */
+  .music-toggle{
+    position: fixed;
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    right: 16px;
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    border: none;
+    background: var(--paper);
+    box-shadow: 0 6px 14px var(--shadow);
+    font-size: 1.3rem;
+    cursor: pointer;
+    z-index: 50;
+    display:flex; align-items:center; justify-content:center;
   }
 
   header{
@@ -108,7 +123,7 @@
   h1 span{ color: var(--coral); }
 
   .scoreboard{
-    display:flex; gap:10px;
+    display:flex; gap:10px; flex-wrap:wrap;
   }
   .pill{
     background: var(--paper);
@@ -119,15 +134,90 @@
     font-size: 0.95rem;
     box-shadow: 0 6px 14px var(--shadow);
     display:flex; align-items:center; gap:6px;
+    white-space: nowrap;
   }
 
-  /* ---------- Kad utama ---------- */
   .card{
     background: var(--paper);
     border-radius: var(--radius-lg);
     box-shadow: 0 14px 30px var(--shadow);
     padding: 24px;
     margin-bottom: 20px;
+  }
+
+  /* ---------- Halaman Utama ---------- */
+  .home-zone{
+    text-align:center;
+  }
+  .home-zone .mascot{
+    font-size: 4.5rem;
+    margin-bottom: 6px;
+  }
+  .home-zone h2{
+    font-family: var(--font-head);
+    font-weight:800;
+    font-size: 1.6rem;
+    margin: 0 0 4px;
+    color: var(--ink);
+  }
+  .home-zone p.sub{
+    margin: 0 0 22px;
+    color:#8a83a6;
+    font-weight:600;
+  }
+  .field{
+    text-align:left;
+    max-width: 340px;
+    margin: 0 auto 16px;
+  }
+  .field label{
+    display:block;
+    font-family: var(--font-head);
+    font-weight:700;
+    font-size: 0.95rem;
+    color: var(--grape);
+    margin-bottom: 6px;
+  }
+  .field input{
+    width:100%;
+    font-family: var(--font-body);
+    font-weight:700;
+    font-size: 1.05rem;
+    padding: 13px 16px;
+    border-radius: var(--radius-md);
+    border: 3px solid #e3ddfb;
+    background: #f8f6ff;
+    color: var(--ink);
+  }
+  .field input:focus{
+    outline:none;
+    border-color: var(--grape);
+    background:#fff;
+  }
+  .start-btn{
+    font-family: var(--font-head);
+    font-weight:800;
+    font-size: 1.2rem;
+    color:#fff;
+    background: linear-gradient(180deg, var(--coral), #e6584a);
+    border:none;
+    border-radius: 999px;
+    padding: 15px 46px;
+    cursor:pointer;
+    margin-top: 6px;
+    box-shadow: 0 8px 0 #c74538, 0 12px 20px var(--shadow);
+    transition: transform .08s ease, opacity .15s ease;
+  }
+  .start-btn:active{ transform: translateY(6px); box-shadow: 0 2px 0 #c74538; }
+  .start-btn:disabled{ opacity:0.45; cursor:not-allowed; }
+  .field-error{
+    color: var(--coral);
+    font-weight:700;
+    font-size: 0.85rem;
+    min-height: 18px;
+    max-width: 340px;
+    margin: -8px auto 6px;
+    text-align:left;
   }
 
   /* ---------- Roda ---------- */
@@ -173,9 +263,10 @@
   .spin-btn:active{ transform: translateY(6px); box-shadow: 0 2px 0 #574aad; }
   .spin-btn:disabled{ opacity:0.5; cursor:not-allowed; }
 
-  /* ---------- Zon permainan (padan suku kata) ---------- */
-  .play-zone{ display:none; }
-  .play-zone.show{ display:block; }
+  /* ---------- Zon permainan ---------- */
+  .home-zone, .wheel-zone, .play-zone{ display:none; }
+  .home-zone.show, .wheel-zone.show, .play-zone.show{ display:block; }
+  .wheel-zone.show{ display:flex; }
 
   .prompt-figure{
     text-align:center;
@@ -262,10 +353,6 @@
     pointer-events: none;
     box-shadow:none;
   }
-  .tile.listen-only{
-    background: #cdeeff;
-    box-shadow: 0 6px 0 #9cd3e8, 0 10px 16px var(--shadow);
-  }
 
   .feedback{
     text-align:center;
@@ -301,8 +388,7 @@
     margin-top: 10px;
   }
 
-  /* fokus papan kekunci kelihatan (aksesibiliti) */
-  button:focus-visible, .slot:focus-visible{
+  button:focus-visible, .slot:focus-visible, input:focus-visible{
     outline: 3px solid var(--grape);
     outline-offset: 3px;
   }
@@ -315,15 +401,37 @@
 </head>
 <body>
 
+<button class="music-toggle" id="musicToggle" title="Bisukan/buka muzik latar" aria-label="Bisukan/buka muzik latar">🔊</button>
+
 <div class="app">
 
   <header>
     <h1>🎡 Roda <span>Eja</span></h1>
-    <div class="scoreboard">
+    <div class="scoreboard" id="scoreboard" style="display:none;">
+      <div class="pill">🙂 <span id="playerLabel">—</span></div>
       <div class="pill">⭐ Markah: <span id="scoreVal">0</span></div>
       <div class="pill">🏆 Terbaik: <span id="bestVal">0</span></div>
     </div>
   </header>
+
+  <!-- ================= HALAMAN UTAMA ================= -->
+  <section class="card home-zone show" id="homeSection">
+    <div class="mascot">🧒🎒</div>
+    <h2>Selamat Datang!</h2>
+    <p class="sub">Masukkan nama dan kelas sebelum mula bermain</p>
+
+    <div class="field">
+      <label for="nameInput">Nama Murid</label>
+      <input type="text" id="nameInput" placeholder="Contoh: Ali" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="classInput">Kelas</label>
+      <input type="text" id="classInput" placeholder="Contoh: Tahun 2 Cerdas" autocomplete="off">
+    </div>
+    <div class="field-error" id="homeError"></div>
+
+    <button class="start-btn" id="startBtn">Main ▶</button>
+  </section>
 
   <!-- ================= RODA PUTAR ================= -->
   <section class="card wheel-zone" id="wheelSection">
@@ -349,6 +457,8 @@
 
   <footer>Dibina untuk membantu murid mengeja suku kata • sunting bebas untuk kegunaan sendiri</footer>
 </div>
+
+<audio id="bgMusic" src="audio/background.mp3" loop preload="none"></audio>
 
 <script>
 /* =======================================================================
@@ -378,17 +488,11 @@ const WORDS = [
 ];
 
 /* =======================================================================
-   2) AUDIO — folder "audio/<suku-kata>.mp3" akan digunakan jika wujud.
-      Jika tiada, apps guna Text-to-Speech pelayar sebagai ganti.
-      Untuk sebutan perkataan penuh (bila jawapan betul), apps cuba
-      "audio/kata-<perkataan>.mp3" dahulu.
+   2) AUDIO SUKU KATA — folder "audio/<suku-kata>.mp3"
+      Tiada fail? guna Text-to-Speech pelayar sebagai ganti.
    ======================================================================= */
-function audioPathFor(text){
-  return `audio/${text}.mp3`;
-}
-function fullWordAudioPath(word){
-  return `audio/kata-${word}.mp3`;
-}
+function audioPathFor(text){ return `audio/${text}.mp3`; }
+function fullWordAudioPath(word){ return `audio/kata-${word}.mp3`; }
 
 function playSound(text, { isFullWord=false } = {}){
   const src = isFullWord ? fullWordAudioPath(text) : audioPathFor(text);
@@ -414,12 +518,120 @@ function speakFallback(text){
 }
 
 /* =======================================================================
-   3) STATE & MARKAH
+   3) SOUND EFFECT (klik roda / betul / salah)
+      folder "audio/sfx-<nama>.mp3". Tiada fail -> bip ringkas dijana
+      terus melalui Web Audio (tiada fail luar diperlukan).
+   ======================================================================= */
+let audioCtx = null;
+function getAudioCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function beep({ freq=520, duration=0.14, type='sine', volume=0.18 } = {}){
+  try{
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.value = volume;
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.stop(ctx.currentTime + duration);
+  }catch(e){ /* senyap jika Web Audio tak disokong */ }
+}
+const SFX_BEEP_FALLBACK = {
+  putar: () => beep({ freq:420, duration:0.18, type:'triangle' }),
+  betul: () => { beep({freq:660,duration:0.12}); setTimeout(()=>beep({freq:880,duration:0.16}),110); },
+  salah: () => beep({ freq:180, duration:0.22, type:'sawtooth', volume:0.15 }),
+};
+function playSfx(name){
+  const src = `audio/sfx-${name}.mp3`;
+  const player = new Audio(src);
+  let usedFallback = false;
+  const fallback = () => {
+    if(usedFallback) return;
+    usedFallback = true;
+    (SFX_BEEP_FALLBACK[name] || (()=>{}))();
+  };
+  player.volume = 0.6;
+  player.addEventListener('error', fallback);
+  const p = player.play();
+  if(p && p.catch) p.catch(fallback);
+}
+
+/* =======================================================================
+   4) MUZIK LATAR — "audio/background.mp3" (boleh diedit/tukar terus)
+   ======================================================================= */
+const bgMusic = document.getElementById('bgMusic');
+bgMusic.volume = 0.32;
+const musicToggle = document.getElementById('musicToggle');
+let musicMuted = localStorage.getItem('rodaEja_musicMuted') === 'true';
+updateMusicIcon();
+
+function updateMusicIcon(){
+  musicToggle.textContent = musicMuted ? '🔇' : '🔊';
+}
+function startBackgroundMusic(){
+  if(musicMuted) return;
+  bgMusic.play().catch(() => { /* fail belum ada / disekat pelayar, senyap sahaja */ });
+}
+musicToggle.addEventListener('click', () => {
+  musicMuted = !musicMuted;
+  localStorage.setItem('rodaEja_musicMuted', musicMuted);
+  updateMusicIcon();
+  if(musicMuted){ bgMusic.pause(); } else { startBackgroundMusic(); }
+});
+
+/* =======================================================================
+   5) HALAMAN UTAMA (nama & kelas)
+   ======================================================================= */
+const homeSection = document.getElementById('homeSection');
+const wheelSection = document.getElementById('wheelSection');
+const playSection = document.getElementById('playSection');
+const scoreboard = document.getElementById('scoreboard');
+const playerLabel = document.getElementById('playerLabel');
+const nameInput = document.getElementById('nameInput');
+const classInput = document.getElementById('classInput');
+const homeError = document.getElementById('homeError');
+const startBtn = document.getElementById('startBtn');
+
+let studentName = '';
+let studentClass = '';
+
+startBtn.addEventListener('click', () => {
+  const name = nameInput.value.trim();
+  const kelas = classInput.value.trim();
+  if(!name){
+    homeError.textContent = 'Sila masukkan nama dahulu ya.';
+    nameInput.focus();
+    return;
+  }
+  homeError.textContent = '';
+  studentName = name;
+  studentClass = kelas;
+  playerLabel.textContent = kelas ? `${name} • ${kelas}` : name;
+  scoreboard.style.display = 'flex';
+
+  // gerak isyarat pengguna pertama -> boleh mulakan muzik latar
+  startBackgroundMusic();
+
+  homeSection.classList.remove('show');
+  wheelSection.classList.add('show');
+});
+
+// benarkan tekan Enter pada medan kelas untuk terus main
+classInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') startBtn.click(); });
+nameInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') classInput.focus(); });
+
+/* =======================================================================
+   6) STATE & MARKAH
    ======================================================================= */
 let score = 0;
 let best = Number(localStorage.getItem('rodaEja_best') || 0);
 let currentWord = null;
-let filledSlots = [];   // { syllable, tileEl }
+let filledSlots = [];
 let isChecking = false;
 
 const scoreValEl = document.getElementById('scoreVal');
@@ -437,7 +649,7 @@ function addScore(){
 }
 
 /* =======================================================================
-   4) LUKIS RODA (canvas)
+   7) LUKIS RODA (canvas)
    ======================================================================= */
 const canvas = document.getElementById('wheelCanvas');
 const ctx = canvas.getContext('2d');
@@ -466,7 +678,6 @@ function drawWheel(){
     ctx.fillText(WORDS[i].emoji, r-14, 0);
     ctx.restore();
   }
-  // bulatan tengah
   ctx.beginPath();
   ctx.arc(cx,cy,34,0,2*Math.PI);
   ctx.fillStyle = '#fff';
@@ -478,22 +689,19 @@ function drawWheel(){
 drawWheel();
 
 /* =======================================================================
-   5) LOGIK PUTAR RODA
+   8) LOGIK PUTAR RODA
    ======================================================================= */
 const spinBtn = document.getElementById('spinBtn');
-const wheelSection = document.getElementById('wheelSection');
-const playSection = document.getElementById('playSection');
-
 spinBtn.addEventListener('click', spinWheel);
 
 function spinWheel(){
+  playSfx('putar');
   spinBtn.disabled = true;
   const n = WORDS.length;
   const sliceDeg = 360/n;
   const targetIndex = Math.floor(Math.random()*n);
-  // sudut supaya bahagian 'targetIndex' berhenti tepat di penunjuk (atas)
   const targetSliceCenterDeg = targetIndex*sliceDeg + sliceDeg/2;
-  const extraSpins = 5*360; // pusingan tambahan supaya nampak berputar laju
+  const extraSpins = 5*360;
   const finalDeg = extraSpins + (360 - targetSliceCenterDeg);
   currentRotation += finalDeg;
   canvas.style.transform = `rotate(${currentRotation}deg)`;
@@ -505,7 +713,7 @@ function spinWheel(){
 }
 
 /* =======================================================================
-   6) BULATKAN SUKU KATA (BABAK PERMAINAN)
+   9) BABAK PERMAINAN (padan suku kata)
    ======================================================================= */
 const promptArt = document.getElementById('promptArt');
 const slotsEl = document.getElementById('slots');
@@ -548,10 +756,9 @@ function startRound(wordObj){
   feedbackEl.className = 'feedback';
   nextBtn.classList.remove('show');
 
-  wheelSection.style.display = 'none';
+  wheelSection.classList.remove('show');
   playSection.classList.add('show');
 
-  // paparkan gambar / emoji
   promptArt.textContent = wordObj.emoji;
   const img = new Image();
   img.onload = () => {
@@ -564,7 +771,6 @@ function startRound(wordObj){
   img.onerror = () => { promptArt.textContent = wordObj.emoji; };
   img.src = wordObj.image;
 
-  // slot kosong ikut bilangan suku kata
   slotsEl.innerHTML = '';
   wordObj.syllables.forEach((_, i) => {
     const slot = document.createElement('div');
@@ -575,7 +781,6 @@ function startRound(wordObj){
     slotsEl.appendChild(slot);
   });
 
-  // palet: suku kata betul + 2 pengganggu, dicampur
   const distractors = pickDistractors(wordObj, 2);
   const tiles = shuffle([...wordObj.syllables, ...distractors]);
   paletteEl.innerHTML = '';
@@ -594,11 +799,8 @@ function startRound(wordObj){
 function onTileClick(tileEl){
   if(isChecking || tileEl.classList.contains('used')) return;
   const syl = tileEl.dataset.syllable;
-
-  // 1) sentiasa mainkan bunyi suku kata bila diklik
   playSound(syl);
 
-  // 2) kalau masih ada slot kosong, letakkan suku kata ke slot seterusnya
   const emptySlot = [...slotsEl.children].find(s => !s.classList.contains('filled'));
   if(!emptySlot) return;
 
@@ -616,7 +818,6 @@ function onTileClick(tileEl){
   }
 }
 
-// klik slot yang sudah terisi = boleh dengar semula ATAU buang balik ke palet
 function onSlotClick(index){
   if(isChecking) return;
   const slot = slotsEl.children[index];
@@ -624,7 +825,6 @@ function onSlotClick(index){
 
   playSound(slot.textContent);
 
-  // buang balik ke palet (untuk murid betulkan susunan)
   const tileId = slot.dataset.sourceTile;
   const tileEl = [...paletteEl.children].find(t => t.dataset.tileId === tileId);
   if(tileEl) tileEl.classList.remove('used');
@@ -645,12 +845,14 @@ function checkAnswer(){
     feedbackEl.textContent = `Bagus! "${currentWord.word}" — betul! ⭐`;
     feedbackEl.className = 'feedback good';
     addScore();
+    playSfx('betul');
     playSound(currentWord.word, { isFullWord:true });
     nextBtn.classList.add('show');
   } else {
     slots.forEach(s => s.classList.add('wrong'));
     feedbackEl.textContent = 'Cuba lagi ya, dengar bunyinya dahulu.';
     feedbackEl.className = 'feedback bad';
+    playSfx('salah');
     setTimeout(resetSlotsForRetry, 700);
   }
 }
@@ -670,7 +872,7 @@ function resetSlotsForRetry(){
 
 nextBtn.addEventListener('click', () => {
   playSection.classList.remove('show');
-  wheelSection.style.display = 'flex';
+  wheelSection.classList.add('show');
 });
 </script>
 </body>
